@@ -57,6 +57,7 @@ class _DracinAppState extends State<DracinApp> with WidgetsBindingObserver {
         SnackBar(
           content: Text('Tercatat otomatis: ${a.entry.title} (${durationText(a.entry.duration)})'),
           duration: const Duration(seconds: 8),
+          persist: false, // dengan layanan Aksesibilitas aktif, Flutter menahan snackbar ber-aksi selamanya
           action: SnackBarAction(
             label: 'Ubah',
             onPressed: () {

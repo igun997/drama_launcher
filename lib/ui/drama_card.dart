@@ -197,6 +197,7 @@ class _Actions extends StatelessWidget {
         SnackBar(
           content: Text('Eps $finished selesai. Berikutnya Eps ${finished + 1}.'),
           duration: const Duration(seconds: 6),
+          persist: false, // layanan Aksesibilitas kita membuat Flutter menahan snackbar ber-aksi selamanya
           action: SnackBarAction(label: 'Urungkan', onPressed: () => state.setEpisode(drama.id, before)),
         ),
       );
