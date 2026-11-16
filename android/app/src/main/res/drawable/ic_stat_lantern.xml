@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Lentera: tutup, badan, dan jumbai -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M9,2h6v2h-6z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M12,4C7.6,4 5,7.4 5,11.5C5,15.6 7.6,19 12,19C16.4,19 19,15.6 19,11.5C19,7.4 16.4,4 12,4zM10,9l5,2.5l-5,2.5z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M9,19h6v1.6h-6z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M11.2,20.6h1.6v2.4h-1.6z" />
+</vector>

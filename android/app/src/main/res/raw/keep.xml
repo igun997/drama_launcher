@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Ikon notifikasi dicari lewat nama oleh plugin; jangan dibuang oleh shrinkResources. -->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@drawable/ic_stat_lantern,@mipmap/ic_launcher*" />

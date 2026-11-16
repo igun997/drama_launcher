@@ -1,0 +1,21 @@
+{
+    "name": "Dracin Launcher",
+    "short_name": "Dracin",
+    "id": "/",
+    "lang": "id",
+    "start_url": ".",
+    "scope": ".",
+    "display": "standalone",
+    "background_color": "#17121F",
+    "theme_color": "#17121F",
+    "description": "Layar utama minimalis untuk penonton drama Tiongkok, dengan pengingat jam tayang dan istirahat mata.",
+    "orientation": "any",
+    "categories": ["entertainment", "utilities"],
+    "prefer_related_applications": false,
+    "icons": [
+        {"src": "icons/Icon-192.png", "sizes": "192x192", "type": "image/png"},
+        {"src": "icons/Icon-512.png", "sizes": "512x512", "type": "image/png"},
+        {"src": "icons/Icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable"},
+        {"src": "icons/Icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+    ]
+}
