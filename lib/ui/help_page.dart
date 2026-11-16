@@ -49,6 +49,11 @@ class HelpPage extends StatelessWidget {
       title: 'Layar terasa macet',
       how: 'Pengaturan, lalu "Mulai ulang aplikasi".',
     ),
+    _Gesture(
+      icon: Icons.view_carousel_rounded,
+      title: 'Tombol Recents tidak berfungsi',
+      how: 'Bila launcher bawaan dimatikan, tombol Recents ikut mati. Pakai "Aktif" di dock sebagai penggantinya.',
+    ),
   ];
 
   @override

@@ -222,21 +222,24 @@ class SettingsPage extends StatelessWidget {
                       ),
                     ],
                     const SizedBox(height: 8),
-                    if (state.isGestureNavigation)
-                      const _StatusTile(ok: true, okText: 'Navigasi gestur aktif (tanpa tombol)', badText: '')
-                    else ...[
-                      const _StatusTile(ok: false, okText: '', badText: 'Navigasi masih memakai tombol'),
-                      const SizedBox(height: 8),
-                      OutlinedButton.icon(
-                        onPressed: () => state.gateway.openGestureSettings(),
-                        icon: const Icon(Icons.gesture_rounded),
-                        label: const Text('Aktifkan navigasi gestur'),
-                      ),
-                    ],
+                    _StatusTile(
+                      ok: true,
+                      okText: state.isGestureNavigation ? 'Navigasi gestur aktif' : 'Navigasi 3 tombol aktif',
+                      badText: '',
+                    ),
+                    const SizedBox(height: 8),
+                    OutlinedButton.icon(
+                      onPressed: () => state.gateway.openGestureSettings(),
+                      icon: const Icon(Icons.gesture_rounded),
+                      label: const Text('Pengaturan navigasi sistem'),
+                    ),
                     const SizedBox(height: 12),
                     Text(
-                      'Geser dari bawah layar: Home. Dari tepi kiri/kanan: kembali. '
-                      'Di beranda, geser ke atas membuka semua aplikasi dan tarik ke bawah dari atas membuka notifikasi.',
+                      state.isGestureNavigation
+                          ? 'Geser dari bawah layar: Home lewat launcher bawaan, jadi bisa ada kedipan singkat. '
+                              'Untuk menghilangkannya: pakai navigasi 3 tombol, lalu matikan launcher bawaan.'
+                          : 'Tombol Home langsung ke sini. Bila launcher bawaan dimatikan, tombol Recents tidak berfungsi: '
+                              'pakai "Aktif" di dock.',
                       style: theme.textTheme.bodyMedium?.copyWith(color: c.muted),
                     ),
                   ],
