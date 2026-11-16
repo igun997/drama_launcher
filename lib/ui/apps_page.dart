@@ -88,14 +88,17 @@ class _AppsPageState extends State<AppsPage> {
                           style: theme.textTheme.titleMedium?.copyWith(color: c.muted),
                         ),
                       )
-                    : GridView.builder(
-                        padding: const EdgeInsets.fromLTRB(12, 4, 12, 24),
-                        gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
-                          maxCrossAxisExtent: 128,
-                          mainAxisExtent: 100 + 40 * scale,
+                    : SwipeDownToClose(
+                        child: GridView.builder(
+                          physics: const AlwaysScrollableScrollPhysics(parent: ClampingScrollPhysics()),
+                          padding: const EdgeInsets.fromLTRB(12, 4, 12, 24),
+                          gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+                            maxCrossAxisExtent: 128,
+                            mainAxisExtent: 100 + 40 * scale,
+                          ),
+                          itemCount: apps.length,
+                          itemBuilder: (context, i) => _AppTile(app: apps[i], pick: widget.pick),
                         ),
-                        itemCount: apps.length,
-                        itemBuilder: (context, i) => _AppTile(app: apps[i], pick: widget.pick),
                       ),
           ),
         ],

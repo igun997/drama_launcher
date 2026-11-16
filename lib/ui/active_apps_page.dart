@@ -100,7 +100,9 @@ class _ActiveAppsPageState extends State<ActiveAppsPage> with WidgetsBindingObse
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 760),
-          child: ListView(
+          child: SwipeDownToClose(
+            child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(parent: ClampingScrollPhysics()),
             padding: const EdgeInsets.fromLTRB(20, 4, 20, 32),
             children: [
               _RamCard(
@@ -158,6 +160,7 @@ class _ActiveAppsPageState extends State<ActiveAppsPage> with WidgetsBindingObse
                   ),
               ],
             ],
+          ),
           ),
         ),
       ),

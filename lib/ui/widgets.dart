@@ -82,3 +82,34 @@ Future<void> openPackage(BuildContext context, AppState state, String package) a
       ..showSnackBar(const SnackBar(content: Text('Aplikasi ini tidak bisa dibuka. Mungkin sudah dihapus.')));
   }
 }
+
+/// Tarik ke bawah dari puncak daftar = kembali (menutup laci/halaman yang dibuka dengan geser ke atas).
+/// Hanya hitungan lewat-ujung-atas: menggulir daftar seperti biasa tidak pernah memicunya.
+class SwipeDownToClose extends StatefulWidget {
+  const SwipeDownToClose({super.key, required this.child});
+  final Widget child;
+
+  @override
+  State<SwipeDownToClose> createState() => _SwipeDownToCloseState();
+}
+
+class _SwipeDownToCloseState extends State<SwipeDownToClose> {
+  double _pull = 0; // positif = ditarik ke bawah melewati puncak
+
+  bool _onScroll(ScrollNotification n) {
+    if (n.depth != 0) return false;
+    if (n is ScrollStartNotification) {
+      _pull = 0;
+    } else if (n is OverscrollNotification && n.overscroll < 0 && n.dragDetails != null) {
+      _pull -= n.overscroll;
+    } else if (n is ScrollEndNotification) {
+      final pull = _pull;
+      _pull = 0;
+      if (pull > 72) Navigator.of(context).maybePop();
+    }
+    return false;
+  }
+
+  @override
+  Widget build(BuildContext context) => NotificationListener<ScrollNotification>(onNotification: _onScroll, child: widget.child);
+}

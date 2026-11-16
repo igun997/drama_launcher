@@ -125,7 +125,11 @@ void main() {
     expect(find.descendant(of: find.byType(Material), matching: find.text('Semua')), findsOneWidget);
     expect(find.text('WeTV'), findsOneWidget);
 
+    // Menggulir daftar ke atas tidak boleh membuka laci; hanya geser pada dock.
     await tester.fling(find.byType(CustomScrollView), const Offset(0, -400), 2000);
+    await tester.pumpAndSettle();
+    expect(find.text('Cari aplikasi'), findsNothing);
+    await tester.fling(find.text('Semua'), const Offset(0, -300), 2000);
     await tester.pumpAndSettle();
     expect(find.text('Cari aplikasi'), findsOneWidget);
     await tester.pump(const Duration(milliseconds: 500));
@@ -183,13 +187,38 @@ void main() {
     expect(gw.usageSettingsOpened, 1);
   });
 
-  testWidgets('tarik ke bawah di beranda membuka bilah notifikasi', (tester) async {
-    final (_, gw, _) = await pumpApp(tester);
+  testWidgets('notifikasi: tarik ke bawah dari bagian jam membukanya; menggulir daftar tidak', (tester) async {
+    final (_, gw, _) = await pumpApp(tester, dramas: [tonight]);
     expect(gw.expanded, 0);
-    await tester.fling(find.byType(CustomScrollView), const Offset(0, 400), 2000);
+    // Tarik daftar ke bawah (sudah di puncak) dari tengah layar: tidak memicu apa pun.
+    await tester.fling(find.text('Lanjut nonton'), const Offset(0, 500), 2000);
+    await tester.pumpAndSettle();
+    expect(gw.expanded, 0);
+    expect(find.text('Cari aplikasi'), findsNothing);
+    // Dari bagian jam: bilah notifikasi.
+    await tester.dragFrom(tester.getCenter(find.text('Selamat malam')) + const Offset(240, 0), const Offset(0, 200));
     await tester.pumpAndSettle();
     expect(gw.expanded, 1);
+  });
+
+  testWidgets('di Semua aplikasi, tarik ke bawah dari puncak daftar kembali ke beranda', (tester) async {
+    await pumpApp(tester);
+    await tester.tap(find.text('Semua'));
+    await tester.pumpAndSettle();
+    expect(find.text('Cari aplikasi'), findsOneWidget);
+    await tester.drag(find.byType(GridView), const Offset(0, 260));
+    await tester.pumpAndSettle();
     expect(find.text('Cari aplikasi'), findsNothing);
+    expect(find.text('Belum ada drama'), findsOneWidget);
+  });
+
+  testWidgets('tombol bantuan menampilkan daftar gestur', (tester) async {
+    await pumpApp(tester);
+    await tester.tap(find.byTooltip('Bantuan gestur'));
+    await tester.pumpAndSettle();
+    expect(find.text('Semua aplikasi'), findsOneWidget);
+    expect(find.text('Notifikasi'), findsOneWidget);
+    expect(find.textContaining('Geser cepat ke atas dari dock'), findsOneWidget);
   });
 
   testWidgets('geser ke atas pada dock membuka laci', (tester) async {

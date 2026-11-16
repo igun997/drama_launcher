@@ -13,6 +13,7 @@ import 'active_apps_page.dart';
 import 'apps_page.dart';
 import 'drama_card.dart';
 import 'drama_editor_page.dart';
+import 'help_page.dart';
 import 'history_page.dart';
 import 'motion.dart';
 import 'settings_page.dart';
@@ -104,8 +105,7 @@ class _Body extends StatelessWidget {
     final up = nextUp(dramas.where((d) => d.remind).toList(), state.now());
     final needsPermission = dramas.any((d) => d.remind && d.hasSchedule) && !state.permissions.all;
 
-    return _HomeGestures(
-      child: CustomScrollView(
+    return CustomScrollView(
       physics: const AlwaysScrollableScrollPhysics(parent: ClampingScrollPhysics()),
       slivers: [
         SliverToBoxAdapter(child: _Header(side: side)),
@@ -171,7 +171,6 @@ class _Body extends StatelessWidget {
           ),
         const SliverToBoxAdapter(child: SizedBox(height: 28)),
       ],
-    ),
     );
   }
 }
@@ -228,7 +227,8 @@ class _Header extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.colors;
     final theme = Theme.of(context);
-    return Padding(
+    return _PullForNotifications(
+      child: Padding(
       padding: EdgeInsets.fromLTRB(side, 18, side - 8 < 12 ? 12 : side - 8, 18),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -273,12 +273,19 @@ class _Header extends StatelessWidget {
             ),
           ),
           IconButton(
+            tooltip: 'Bantuan gestur',
+            iconSize: 30,
+            onPressed: () => Navigator.of(context).push(motionRoute((_) => const HelpPage())),
+            icon: const Icon(Icons.help_outline_rounded, semanticLabel: 'Bantuan gestur'),
+          ),
+          IconButton(
             tooltip: 'Pengaturan',
             iconSize: 30,
             onPressed: () => Navigator.of(context).push(motionRoute((_) => const SettingsPage())),
             icon: const Icon(Icons.settings_outlined, semanticLabel: 'Pengaturan'),
           ),
         ],
+      ),
       ),
     );
   }
@@ -412,7 +419,8 @@ class _Dock extends StatelessWidget {
     final state = AppScope.of(context);
     final c = context.colors;
     final apps = state.dockApps;
-    return SafeArea(
+    return _DockSwipe(
+      child: SafeArea(
       top: false,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 6, 16, 12),
@@ -430,8 +438,7 @@ class _Dock extends StatelessWidget {
                   const CustomSemanticsAction(label: 'Buka semua aplikasi'): () => openAppsPage(context),
                   const CustomSemanticsAction(label: 'Buka aplikasi aktif'): () => openActiveApps(context),
                 },
-                child: _DockSwipe(
-                  child: Material(
+                child: Material(
                     color: c.surface.withValues(alpha: 0.96),
                     elevation: 12,
                     shadowColor: Colors.black,
@@ -470,11 +477,11 @@ class _Dock extends StatelessWidget {
                       ),
                     ),
                   ),
-                ),
               ),
             ),
           ),
         ),
+      ),
       ),
     );
   }
@@ -613,39 +620,43 @@ class _AllAppsTile extends StatelessWidget {
   }
 }
 
-/// Gestur beranda tanpa tombol: tarik ke atas di mana saja membuka laci aplikasi,
-/// tarik ke bawah dari atas membuka bilah notifikasi.
-class _HomeGestures extends StatefulWidget {
-  const _HomeGestures({required this.child});
+/// Tarik ke bawah dari bagian jam (puncak beranda) membuka bilah notifikasi.
+/// Sengaja memakai Listener (tidak ikut berebut gestur) dan hanya di kepala beranda,
+/// supaya menggulir daftar drama tidak pernah memicu notifikasi.
+class _PullForNotifications extends StatefulWidget {
+  const _PullForNotifications({required this.child});
   final Widget child;
 
   @override
-  State<_HomeGestures> createState() => _HomeGesturesState();
+  State<_PullForNotifications> createState() => _PullForNotificationsState();
 }
 
-class _HomeGesturesState extends State<_HomeGestures> {
-  double _pull = 0; // + = lewat ujung bawah (geser ke atas), - = lewat ujung atas (geser ke bawah)
+class _PullForNotificationsState extends State<_PullForNotifications> {
+  Offset? _start;
 
-  bool _onScroll(ScrollNotification n) {
-    if (n.depth != 0) return false;
-    if (n is ScrollStartNotification) {
-      _pull = 0;
-    } else if (n is OverscrollNotification) {
-      _pull += n.overscroll;
-    } else if (n is ScrollEndNotification) {
-      final pull = _pull;
-      _pull = 0;
-      if (pull > 48) {
-        openAppsPage(context);
-      } else if (pull < -48) {
-        AppScope.of(context).pullDownNotifications();
-      }
-    }
-    return false;
+  void _up(PointerUpEvent e) {
+    final start = _start;
+    _start = null;
+    if (start == null) return;
+    final d = e.position - start;
+    if (d.dy < 90 || d.dx.abs() > d.dy * 0.5) return;
+    // Kepala harus masih terlihat penuh (daftar tidak sedang tergulir).
+    final box = context.findRenderObject() as RenderBox?;
+    if (box == null || !box.attached) return;
+    if (box.localToGlobal(Offset.zero).dy < MediaQuery.paddingOf(context).top - 2) return;
+    AppScope.of(context).pullDownNotifications();
   }
 
   @override
-  Widget build(BuildContext context) => NotificationListener<ScrollNotification>(onNotification: _onScroll, child: widget.child);
+  Widget build(BuildContext context) {
+    return Listener(
+      behavior: HitTestBehavior.translucent, // juga ruang kosong di kepala beranda, bukan hanya teks
+      onPointerDown: (e) => _start = e.position,
+      onPointerCancel: (_) => _start = null,
+      onPointerUp: _up,
+      child: widget.child,
+    );
+  }
 }
 
 /// Geser ke atas pada dock, seperti gestur sistem:
