@@ -4,6 +4,7 @@ import '../core/format.dart';
 import '../core/theme.dart';
 import '../data/app_state.dart';
 import '../data/models.dart';
+import '../platform/launcher_gateway.dart' show SilentStatus;
 import 'motion.dart';
 import 'widgets.dart';
 
@@ -113,6 +114,9 @@ class _ActiveAppsPageState extends State<ActiveAppsPage> with WidgetsBindingObse
               if (state.hasUsageAccess && !state.canCloseApps) ...[
                 _ServiceCard(state: state),
                 const SizedBox(height: 16),
+              ] else if (state.hasUsageAccess && state.silentStatus != SilentStatus.ready) ...[
+                _SilentHint(state: state),
+                const SizedBox(height: 8),
               ],
               if (!state.hasUsageAccess)
                 _AccessCard(state: state)
@@ -228,7 +232,7 @@ class _RamCard extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                'Menutup aplikasi satu per satu (Paksa berhenti); layar Info aplikasi tampil sebentar. '
+                'Menutup aplikasi satu per satu (Paksa berhenti); di mode Aksesibilitas layar Info aplikasi tampil sebentar. '
                 'Android bisa membukanya lagi bila dibutuhkan, jadi hasilnya sementara. '
                 'Aplikasi yang sedang tampil, keyboard, dan telepon tidak ditutup.',
                 style: theme.textTheme.bodyMedium?.copyWith(color: c.muted),
@@ -386,6 +390,12 @@ class _ServiceCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.colors;
     final theme = Theme.of(context);
+    final (silentText, silentButton) = switch (state.silentStatus) {
+      SilentStatus.notInstalled => ('Shizuku belum terpasang. Pasang, lalu mulai lewat Debugging nirkabel (sekali setiap tablet dihidupkan ulang).', 'Pasang Shizuku'),
+      SilentStatus.notRunning => ('Shizuku sudah terpasang tetapi belum berjalan. Buka Shizuku lalu pilih Mulai.', 'Buka Shizuku'),
+      SilentStatus.needsPermission => ('Izinkan Dracin Launcher memakai Shizuku.', 'Izinkan'),
+      SilentStatus.ready => ('Siap.', 'Siap'),
+    };
     return Material(
       color: c.surfaceHigh,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22), side: BorderSide(color: c.outline.withValues(alpha: 0.5))),
@@ -397,13 +407,30 @@ class _ServiceCard extends StatelessWidget {
             Semantics(header: true, child: Text('Mau bisa menutup aplikasi juga?', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800))),
             const SizedBox(height: 8),
             Text(
-              'Sejak Android 14, aplikasi biasa tidak boleh menutup aplikasi lain secara langsung. '
-              'Nyalakan layanan "Tutup Aplikasi (Dracin Launcher)" di Aksesibilitas: layanan ini hanya menekan '
-              '"Paksa berhenti" dan "Oke" di layar Info aplikasi saat Anda menekan Tutup, dan tidak membaca aplikasi lain. '
-              'Tanpa ini, halaman ini tetap berguna untuk memantau.',
+              'Sejak Android 14, aplikasi biasa tidak boleh menutup aplikasi lain secara langsung. Pilih salah satu cara '
+              '(tanpa keduanya, halaman ini tetap berguna untuk memantau):',
+              style: theme.textTheme.bodyLarge,
+            ),
+            const SizedBox(height: 14),
+            Text('1. Senyap, tanpa membuka layar apa pun (Shizuku)', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800, color: c.accent)),
+            const SizedBox(height: 4),
+            Text(silentText, style: theme.textTheme.bodyMedium),
+            const SizedBox(height: 10),
+            FilledButton.icon(
+              onPressed: state.silentNextStep,
+              icon: const Icon(Icons.bolt_rounded),
+              label: Text(silentButton),
+            ),
+            const SizedBox(height: 18),
+            Text('2. Lewat layar Info aplikasi (Aksesibilitas)', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800, color: c.accent)),
+            const SizedBox(height: 4),
+            Text(
+              'Nyalakan layanan "Tutup Aplikasi (Dracin Launcher)". Layanan ini hanya menekan "Paksa berhenti" dan "Oke" '
+              'di layar Info aplikasi saat Anda menekan Tutup, dan tidak membaca aplikasi lain. Layar Pengaturan tampil sebentar '
+              'untuk setiap aplikasi.',
               style: theme.textTheme.bodyMedium,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
             Wrap(
               spacing: 12,
               runSpacing: 12,
@@ -424,6 +451,26 @@ class _ServiceCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Saat hanya mode layar (Aksesibilitas) yang aktif: tawarkan mode senyap supaya Pengaturan tidak terbuka.
+class _SilentHint extends StatelessWidget {
+  const _SilentHint({required this.state});
+  final AppState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    final theme = Theme.of(context);
+    return Row(
+      children: [
+        Icon(Icons.bolt_rounded, color: c.accent),
+        const SizedBox(width: 10),
+        Expanded(child: Text('Tidak mau Pengaturan terbuka saat menutup? Pakai mode senyap (Shizuku).', style: theme.textTheme.bodyMedium?.copyWith(color: c.muted))),
+        TextButton(onPressed: state.silentNextStep, child: const Text('Aktifkan')),
+      ],
     );
   }
 }

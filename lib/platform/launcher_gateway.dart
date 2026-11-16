@@ -4,6 +4,9 @@ import 'package:flutter/services.dart';
 import '../data/models.dart';
 
 /// Pintu ke Android untuk fungsi launcher. Diganti palsu di tes.
+/// Kesiapan Shizuku. Urutannya sama dengan konstanta di ShizukuBridge.kt.
+enum SilentStatus { notInstalled, notRunning, needsPermission, ready }
+
 abstract class LauncherGateway {
   Future<List<AppEntry>> apps();
   Future<bool> launch(String package);
@@ -32,6 +35,11 @@ abstract class LauncherGateway {
   /// Aplikasi yang dipakai dalam 6 jam terakhir, terbaru dulu.
   Future<List<ActiveUsage>> activeApps();
   Future<RamInfo> memoryInfo();
+
+  /// Status mode senyap (Shizuku): menutup aplikasi tanpa membuka layar apa pun.
+  Future<SilentStatus> silentStatus();
+  Future<bool> requestSilent();
+  Future<bool> openShizukuStore();
 
   /// Layanan aksesibilitas "Tutup Aplikasi" aktif. Android 14+ melarang aplikasi biasa
   /// menutup aplikasi lain secara langsung, jadi penutupan lewat Info aplikasi > Paksa berhenti.
@@ -150,6 +158,18 @@ class PlatformLauncherGateway implements LauncherGateway {
 
   @override
   Future<RamInfo> memoryInfo() async => _ram(await _channel.invokeMapMethod<Object?, Object?>('memoryInfo'));
+
+  @override
+  Future<SilentStatus> silentStatus() async {
+    final v = (await _channel.invokeMethod<int>('silentStatus')) ?? 0;
+    return SilentStatus.values[v.clamp(0, SilentStatus.values.length - 1)];
+  }
+
+  @override
+  Future<bool> requestSilent() => _bool('requestSilent');
+
+  @override
+  Future<bool> openShizukuStore() => _bool('openShizukuStore');
 
   @override
   Future<bool> forceStopEnabled() => _bool('forceStopEnabled');

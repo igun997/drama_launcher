@@ -1,5 +1,6 @@
 import 'package:dracin_launcher/data/app_state.dart';
 import 'package:dracin_launcher/data/models.dart';
+import 'package:dracin_launcher/platform/launcher_gateway.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -14,6 +15,7 @@ Future<(AppState, FakeGateway)> make({bool access = true}) async {
     AppEntry(package: 'com.viu', label: 'Viu', icon: kPng),
     AppEntry(package: 'com.chat', label: 'Chat', icon: kPng),
     AppEntry(package: 'com.android.settings', label: 'Pengaturan', icon: kPng),
+    AppEntry(package: 'moe.shizuku.privileged.api', label: 'Shizuku', icon: kPng),
   ]);
   gw.usageAccess = access;
   gw.usage = [
@@ -41,11 +43,13 @@ void main() {
     final (state, gw) = await make();
     gw.usage = [
       ActiveUsage(package: 'com.android.settings', lastUsedMs: t0.millisecondsSinceEpoch, foreground: false),
+      ActiveUsage(package: 'moe.shizuku.privileged.api', lastUsedMs: t0.millisecondsSinceEpoch, foreground: false),
       ...gw.usage,
     ];
     await state.refreshApps();
     await state.refreshActive();
     expect(state.activeApps.map((a) => a.app.package), isNot(contains('com.android.settings')));
+    expect(state.activeApps.map((a) => a.app.package), isNot(contains('moe.shizuku.privileged.api')));
   });
 
   test('tanpa akses penggunaan daftar kosong tetapi RAM tetap terbaca', () async {
@@ -121,5 +125,33 @@ void main() {
     expect(state.closeProgress.value, 'Menutup 2/3: Chrome');
     await state.closeApp('com.wetv');
     expect(state.closeProgress.value, isNull);
+  });
+
+  test('mode senyap (Shizuku) siap: bisa menutup tanpa layanan Aksesibilitas', () async {
+    final (state, gw) = await make();
+    gw.closeService = false;
+    gw.silent = SilentStatus.ready;
+    await state.refreshActive();
+    expect(state.canCloseApps, isTrue);
+    expect(state.accessibilityClose, isFalse);
+    final r = await state.closeApp('com.wetv');
+    expect(r, isNotNull);
+    expect(gw.stopped, [['com.wetv']]);
+  });
+
+  test('langkah berikutnya mode senyap mengikuti status Shizuku', () async {
+    final (state, gw) = await make();
+    gw.closeService = false;
+    await state.refreshActive();
+    await state.silentNextStep();
+    expect(gw.shizukuStoreOpened, 1);
+    gw.silent = SilentStatus.notRunning;
+    await state.refreshActive();
+    await state.silentNextStep();
+    expect(gw.launched, ['moe.shizuku.privileged.api']);
+    gw.silent = SilentStatus.needsPermission;
+    await state.refreshActive();
+    await state.silentNextStep();
+    expect(gw.silentRequested, 1);
   });
 }

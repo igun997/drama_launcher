@@ -51,12 +51,14 @@ class AppState extends ChangeNotifier {
   bool _appsLoaded = false;
   bool _usageAccess = true;
   bool _closeService = false;
+  SilentStatus _silent = SilentStatus.notInstalled;
   List<ActiveApp> _active = const [];
   RamInfo _ram = const RamInfo(avail: 0, total: 0);
   final Map<String, int> _closedAt = {};
 
   /// Pengaturan dibuka oleh layanan Tutup Aplikasi sendiri; jangan dihitung sebagai aplikasi aktif.
-  static const _notShownAsActive = {'com.android.settings'};
+  /// Shizuku juga disembunyikan: menutupnya akan mematikan mode senyap.
+  static const _notShownAsActive = {'com.android.settings', 'moe.shizuku.privileged.api'};
   _Session? _session;
   String? pendingOpenDramaId;
   Timer? _syncTimer;
@@ -84,8 +86,11 @@ class AppState extends ChangeNotifier {
   bool get isDefaultLauncher => _defaultLauncher;
   bool get isGestureNavigation => _gestureNav;
   bool get hasUsageAccess => _usageAccess;
-  /// Bisa menutup aplikasi (layanan Aksesibilitas aktif). Bila tidak, fitur ini hanya memantau.
-  bool get canCloseApps => _closeService;
+  /// Bisa menutup aplikasi: Shizuku siap (senyap) atau layanan Aksesibilitas aktif.
+  /// Bila tidak, fitur ini hanya memantau.
+  bool get canCloseApps => _closeService || _silent == SilentStatus.ready;
+  SilentStatus get silentStatus => _silent;
+  bool get accessibilityClose => _closeService;
   List<ActiveApp> get activeApps => _active;
   int get activeCount => _active.length;
   RamInfo get ram => _ram;
@@ -375,6 +380,7 @@ class AppState extends ChangeNotifier {
     try {
       _usageAccess = await gateway.hasUsageAccess();
       _closeService = await gateway.forceStopEnabled();
+      _silent = await gateway.silentStatus();
       _ram = await gateway.memoryInfo();
       if (!_usageAccess) {
         _active = const [];
@@ -403,6 +409,7 @@ class AppState extends ChangeNotifier {
   Future<RamResult?> closeApps(List<String> packages) async {
     if (!canCloseApps) {
       _closeService = await gateway.forceStopEnabled();
+      _silent = await gateway.silentStatus();
       if (!canCloseApps) {
         notifyListeners();
         return null;
@@ -414,6 +421,7 @@ class AppState extends ChangeNotifier {
       result = await gateway.forceStop(packages);
     } on PlatformException {
       _closeService = false;
+      _silent = SilentStatus.notRunning;
       notifyListeners();
       return null;
     } finally {
@@ -437,6 +445,20 @@ class AppState extends ChangeNotifier {
   Future<void> openAccessibilitySettings() => gateway.openAccessibilitySettings();
 
   Future<void> restartApp() => gateway.restartApp();
+
+  /// Langkah berikutnya untuk mode senyap sesuai status Shizuku.
+  Future<void> silentNextStep() async {
+    switch (_silent) {
+      case SilentStatus.notInstalled:
+        await gateway.openShizukuStore();
+      case SilentStatus.notRunning:
+        await gateway.launch('moe.shizuku.privileged.api');
+      case SilentStatus.needsPermission:
+        await gateway.requestSilent();
+      case SilentStatus.ready:
+        break;
+    }
+  }
 
 
   _Session? _endSession() {

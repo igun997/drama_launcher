@@ -160,6 +160,7 @@ void main() {
     await tester.pumpAndSettle();
     // Hanya memantau: ada RAM dan daftar, tetapi tidak ada tombol Tutup/Bersihkan RAM.
     expect(find.text('Mau bisa menutup aplikasi juga?'), findsOneWidget);
+    expect(find.text('Pasang Shizuku'), findsOneWidget); // Shizuku belum terpasang di FakeGateway
     expect(find.text('Hanya memantau: RAM kosong dan aplikasi yang baru dipakai.'), findsOneWidget);
     expect(find.text('Bersihkan RAM'), findsNothing);
     expect(find.byTooltip('Tutup WeTV'), findsNothing);

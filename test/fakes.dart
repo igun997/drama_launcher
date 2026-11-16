@@ -27,6 +27,9 @@ class FakeGateway implements LauncherGateway {
   bool usageAccess = true;
   List<ActiveUsage> usage = const [];
   bool closeService = true;
+  SilentStatus silent = SilentStatus.notInstalled;
+  int silentRequested = 0;
+  int shizukuStoreOpened = 0;
   final failStop = <String>{};
   final stopped = <List<String>>[];
   int accessibilityOpened = 0;
@@ -84,6 +87,20 @@ class FakeGateway implements LauncherGateway {
   }
 
   @override
+  Future<SilentStatus> silentStatus() async => silent;
+  @override
+  Future<bool> requestSilent() async {
+    silentRequested++;
+    return true;
+  }
+
+  @override
+  Future<bool> openShizukuStore() async {
+    shizukuStoreOpened++;
+    return true;
+  }
+
+  @override
   Future<bool> forceStopEnabled() async => closeService;
   @override
   Future<bool> openAccessibilitySettings() async {
@@ -93,7 +110,7 @@ class FakeGateway implements LauncherGateway {
 
   @override
   Future<RamResult> forceStop(List<String> packages) async {
-    if (!closeService) throw PlatformException(code: 'service_off');
+    if (!closeService && silent != SilentStatus.ready) throw PlatformException(code: 'service_off');
     stopped.add(packages);
     ram = RamInfo(avail: ram.avail + 300 * 1024 * 1024, total: ram.total);
     final ok = [for (final p in packages) if (!failStop.contains(p)) p];

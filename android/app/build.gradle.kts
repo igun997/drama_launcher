@@ -66,6 +66,10 @@ kotlin {
 
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+    // Tutup aplikasi tanpa layar: Shizuku (hak shell) + akses API tersembunyi. Opsional saat dipakai.
+    implementation("dev.rikka.shizuku:api:13.1.5")
+    implementation("dev.rikka.shizuku:provider:13.1.5")
+    implementation("org.lsposed.hiddenapibypass:hiddenapibypass:6.2")
 }
 
 flutter {

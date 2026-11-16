@@ -9,7 +9,7 @@ Layar utama (launcher) Android yang minimalis untuk penonton drama Tiongkok. Pri
 - **Pengingat tayang**: hari dan jam tayang per drama, dibunyikan 0/10/30 menit sebelumnya, tahan restart.
 - **Istirahat mata** (1 sampai 2,5 jam setelah membuka aplikasi tontonan) dan **waktu tidur** opsional.
 - **Dock melayang** (aplikasi tontonan + pintasan + Aktif + Semua) dan gestur tanpa tombol: geser ke atas = semua aplikasi, geser pelan lalu tahan di dock = aplikasi aktif, tarik ke bawah dari atas = notifikasi. Tombol Home/gestur sistem selalu kembali ke beranda.
-- **Aplikasi aktif** (dipakai 6 jam terakhir) dengan Tutup per aplikasi, geser-untuk-tutup, dan **Bersihkan RAM** (mengukur RAM kosong sebelum/sesudah). Menutup aplikasi hanya aktif bila layanan Aksesibilitas "Tutup Aplikasi" dinyalakan (Android 14+ melarang cara langsung): layanan menekan Paksa berhenti dan Oke di Info aplikasi. Tanpanya halaman ini hanya memantau (RAM dan daftar aplikasi).
+- **Aplikasi aktif** (dipakai 6 jam terakhir) dengan Tutup per aplikasi, geser-untuk-tutup, dan **Bersihkan RAM** (mengukur RAM kosong sebelum/sesudah). Menutup aplikasi (Android 14+ melarang cara langsung) lewat dua cara: **Shizuku** (senyap, tanpa layar apa pun; dimulai lewat Debugging nirkabel/adb, ulangi tiap restart tablet) atau layanan **Aksesibilitas** "Tutup Aplikasi" yang menekan Paksa berhenti dan Oke di Info aplikasi (layar Pengaturan tampil sebentar). Tanpa keduanya halaman ini hanya memantau (RAM dan daftar aplikasi).
 - Tanpa internet, tanpa iklan. Data hanya di perangkat (SharedPreferences).
 
 ## Aksesibilitas
@@ -28,7 +28,7 @@ Hanya `opacity`/`transform` (tanpa layout): tampil berurutan, tekan-menyusut, le
 
 - Ikon aplikasi dirender di thread latar (128 px), di-cache per `package:lastUpdateTime`, dan memakai satu `ImageProvider` per aplikasi.
 - Zona waktu, daftar aplikasi, dan pengingat disiapkan setelah frame pertama.
-- Dependensi Dart: `flutter_local_notifications`, `shared_preferences`, `timezone` (data 10 tahun), `material_ui`.
+- Dependensi Dart: `flutter_local_notifications`, `shared_preferences`, `timezone` (data 10 tahun), `material_ui`. Native: Shizuku API + HiddenApiBypass (hanya untuk mode senyap).
 - Rilis: R8 + `shrinkResources`, gambar WebP.
 
 ## Build (remote, bukan di komputer ini)
@@ -61,5 +61,6 @@ Paket: `com.ciptadusa.dracin_launcher`. Lisensi: MIT.
 ## Izin khusus
 
 - **Akses penggunaan** (Pengaturan > Akses penggunaan): daftar aplikasi aktif.
-- **Aksesibilitas "Tutup Aplikasi"** (opsional): hanya mendengarkan jendela Pengaturan sistem; tanpanya Aplikasi aktif hanya memantau.
+- **Shizuku** (opsional, mode senyap): pasang Shizuku, mulai lewat Debugging nirkabel/adb, lalu "Izinkan" di layar Aplikasi aktif.
+- **Aksesibilitas "Tutup Aplikasi"** (opsional, alternatif): hanya mendengarkan jendela Pengaturan sistem.
 - Pengingat tepat waktu: notifikasi + "Alarm & pengingat".

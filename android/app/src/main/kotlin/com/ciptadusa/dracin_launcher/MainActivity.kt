@@ -81,6 +81,12 @@ class MainActivity : FlutterActivity() {
                     result.success(true)
                     restartApp()
                 }
+                "silentStatus" -> result.success(ShizukuBridge.status(this))
+                "requestSilent" -> {
+                    ShizukuBridge.requestPermission()
+                    result.success(true)
+                }
+                "openShizukuStore" -> result.success(openShizukuStore())
                 "forceStopEnabled" -> result.success(forceStopEnabled())
                 "openAccessibilitySettings" -> result.success(openAccessibilitySettings())
                 "forceStop" -> forceStop(call.argument<List<String>>("packages") ?: emptyList(), result)
@@ -281,6 +287,7 @@ class MainActivity : FlutterActivity() {
     private fun protectedPackages(): Set<String> {
         val out = HashSet<String>()
         out.add(packageName)
+        out.add(ShizukuBridge.SHIZUKU_PACKAGE) // menutupnya mematikan mode senyap
         runCatching {
             Settings.Secure.getString(contentResolver, Settings.Secure.DEFAULT_INPUT_METHOD)
                 ?.substringBefore('/')?.let { out.add(it) }
@@ -304,6 +311,19 @@ class MainActivity : FlutterActivity() {
         }, 150)
     }
 
+    /** Pasang Shizuku: Play Store bila ada, selain itu halaman unduhannya. */
+    private fun openShizukuStore(): Boolean {
+        val candidates = listOf(
+            Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=${ShizukuBridge.SHIZUKU_PACKAGE}")),
+            Intent(Intent.ACTION_VIEW, Uri.parse("https://shizuku.rikka.app/download/")),
+        )
+        for (intent in candidates) {
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            if (runCatching { startActivity(intent) }.isSuccess) return true
+        }
+        return false
+    }
+
     private fun isStopped(pkg: String): Boolean = runCatching {
         packageManager.getApplicationInfo(pkg, 0).flags and android.content.pm.ApplicationInfo.FLAG_STOPPED != 0
     }.getOrDefault(false)
@@ -324,11 +344,39 @@ class MainActivity : FlutterActivity() {
      * satu per satu, lalu membawa launcher kembali ke depan dan mengukur memori kosong.
      */
     private fun forceStop(packages: List<String>, result: MethodChannel.Result) {
-        if (!forceStopEnabled()) {
-            result.error("service_off", "Layanan Tutup Aplikasi belum aktif", null)
+        val silent = ShizukuBridge.status(this) == ShizukuBridge.READY
+        if (!silent && !forceStopEnabled()) {
+            result.error("service_off", "Belum ada cara menutup aplikasi yang aktif", null)
             return
         }
         val skip = protectedPackages()
+        if (silent) {
+            // Tanpa layar apa pun: setiap aplikasi dihentikan langsung lewat Shizuku.
+            worker.execute {
+                val before = memoryInfo()["avail"] ?: 0L
+                val targets = packages.filter { it !in skip }
+                val stopped = ArrayList<String>()
+                for ((index, pkg) in targets.withIndex()) {
+                    val label = runCatching { packageManager.getApplicationInfo(pkg, 0).loadLabel(packageManager).toString() }.getOrDefault(pkg)
+                    main.post { channel?.invokeMethod("closeProgress", mapOf("done" to index, "total" to targets.size, "label" to label)) }
+                    if (ShizukuBridge.forceStop(pkg)) stopped.add(pkg)
+                }
+                Thread.sleep(900)
+                val after = memoryInfo()
+                main.post {
+                    result.success(
+                        mapOf(
+                            "closed" to stopped.size,
+                            "stopped" to stopped,
+                            "freed" to ((after["avail"] ?: 0L) - before),
+                            "avail" to (after["avail"] ?: 0L),
+                            "total" to (after["total"] ?: 0L),
+                        ),
+                    )
+                }
+            }
+            return
+        }
         worker.execute {
             val before = memoryInfo()["avail"] ?: 0L
             val stoppedPackages = ArrayList<String>()
