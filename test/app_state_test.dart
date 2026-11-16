@@ -33,6 +33,7 @@ void main() {
     expect(sch.breaks.single.minutes, 90);
     expect(state.watching, isTrue);
     state.onResumed();
+    await Future<void>.delayed(Duration.zero);
     expect(state.watching, isFalse);
     expect(sch.cancelBreaks, 1);
   });

@@ -36,11 +36,13 @@ void main() {
       await state.launchDrama(cn);
       clockNow = clockNow.add(const Duration(seconds: 20));
       state.onResumed();
+      await Future<void>.delayed(Duration.zero);
       expect(state.pendingRecap.value, isNull);
 
       await state.launchDrama(cn);
       clockNow = clockNow.add(const Duration(minutes: 42));
       state.onResumed();
+      await Future<void>.delayed(Duration.zero);
       final r = state.pendingRecap.value!;
       expect((r.dramaId, r.package, r.duration), ('cn', 'com.tencent.qqlivei18n', const Duration(minutes: 42)));
       await settle();
@@ -51,6 +53,7 @@ void main() {
       await state.launchPackage('com.tencent.qqlivei18n');
       clockNow = clockNow.add(const Duration(minutes: 10));
       state.onResumed();
+      await Future<void>.delayed(Duration.zero);
       expect(state.pendingRecap.value!.dramaId, isNull);
       expect(state.pendingRecap.value!.package, 'com.tencent.qqlivei18n');
     });
@@ -60,6 +63,7 @@ void main() {
       await state.launchPackage('com.kalkulator');
       clockNow = clockNow.add(const Duration(minutes: 10));
       state.onResumed();
+      await Future<void>.delayed(Duration.zero);
       expect(state.pendingRecap.value, isNull);
     });
 
@@ -69,6 +73,7 @@ void main() {
       await state.launchDrama(cn);
       clockNow = clockNow.add(const Duration(minutes: 42));
       state.onResumed();
+      await Future<void>.delayed(Duration.zero);
       state.logWatch(state.pendingRecap.value!, drama: cn, completed: true);
 
       final h = state.history.single;
@@ -86,6 +91,7 @@ void main() {
       await state.launchDrama(cn);
       clockNow = clockNow.add(const Duration(minutes: 15));
       state.onResumed();
+      await Future<void>.delayed(Duration.zero);
       state.logWatch(state.pendingRecap.value!, drama: cn, completed: false);
       expect(state.history.single.completed, isFalse);
       expect(state.history.single.episode, 4); // yang sedang ditonton
@@ -99,6 +105,7 @@ void main() {
       await state.launchPackage('com.iqiyi.i18n');
       clockNow = clockNow.add(const Duration(minutes: 5));
       state.onResumed();
+      await Future<void>.delayed(Duration.zero);
       state.logWatch(state.pendingRecap.value!, drama: null, completed: true);
       final h = state.history.single;
       expect((h.title, h.episode, h.completed, h.dramaId), ('iQIYI', null, false, null));
@@ -110,6 +117,7 @@ void main() {
       await state.launchDrama(cn);
       clockNow = clockNow.add(const Duration(minutes: 5));
       state.onResumed();
+      await Future<void>.delayed(Duration.zero);
       state.skipRecap();
       expect(state.history, isEmpty);
       expect(state.pendingRecap.value, isNull);
@@ -194,6 +202,73 @@ void main() {
       expect(Drama.fromJson({'id': 'a', 'title': 'T', 'kind': 'aneh'}).kind, ThemePackId.dracin);
       final s = AppSettings.fromJson(const AppSettings(viewMode: ViewMode.drakor).toJson());
       expect(s.viewMode, ViewMode.drakor);
+    });
+  });
+
+  group('catat otomatis dari judul yang terbaca', () {
+    test('judul cocok dengan drama: dicatat otomatis dengan gambar kecil, tanpa lembar rekap', () async {
+      final (state, gw, _) = await make();
+      state.saveDrama(cn);
+      await state.launchDrama(cn);
+      gw.seen = const NowWatchingInfo(package: 'com.tencent.qqlivei18n', title: 'love  STORY', thumb: '/data/thumbs/a.jpg');
+      clockNow = clockNow.add(const Duration(minutes: 30));
+      state.onResumed();
+      await Future<void>.delayed(Duration.zero);
+
+      expect(state.pendingRecap.value, isNull);
+      final h = state.history.single;
+      expect((h.title, h.dramaId, h.auto, h.thumb, h.durationSec), ('Love Story', 'cn', true, '/data/thumbs/a.jpg', 30 * 60));
+      expect(state.autoLogged.value!.entry.id, h.id);
+      expect(gw.clearedSeen, 1);
+      await settle();
+    });
+
+    test('judul tidak dikenal: tetap dicatat dengan judul terbaca dari layar', () async {
+      final (state, gw, _) = await make();
+      await state.launchPackage('com.iqiyi.i18n');
+      gw.seen = const NowWatchingInfo(package: 'com.iqiyi.i18n', title: 'Overdo', thumb: null);
+      clockNow = clockNow.add(const Duration(minutes: 12));
+      state.onResumed();
+      await Future<void>.delayed(Duration.zero);
+      final h = state.history.single;
+      expect((h.title, h.dramaId, h.auto, h.thumb), ('Overdo', null, true, null));
+    });
+
+    test('judul dari aplikasi lain atau pengaturan mati: kembali ke pertanyaan "Tadi nonton apa?"', () async {
+      final (state, gw, _) = await make();
+      await state.launchPackage('com.iqiyi.i18n');
+      gw.seen = const NowWatchingInfo(package: 'com.tencent.qqlivei18n', title: 'Sisa dari WeTV', thumb: null);
+      clockNow = clockNow.add(const Duration(minutes: 12));
+      state.onResumed();
+      await Future<void>.delayed(Duration.zero);
+      expect(state.history, isEmpty);
+      expect(state.pendingRecap.value, isNotNull);
+
+      state.skipRecap();
+      state.updateSettings(state.settings.copyWith(autoLog: false));
+      gw.seen = const NowWatchingInfo(package: 'com.iqiyi.i18n', title: 'Overdo', thumb: null);
+      await state.launchPackage('com.iqiyi.i18n');
+      clockNow = clockNow.add(const Duration(minutes: 12));
+      state.onResumed();
+      await Future<void>.delayed(Duration.zero);
+      expect(state.history, isEmpty);
+      expect(state.pendingRecap.value, isNotNull);
+    });
+
+    test('titlesMatch: abaikan huruf besar dan tanda baca; potongan pendek tidak cocok sembarangan', () {
+      expect(titlesMatch('Love Between Fairy & Devil', 'love between fairy and devil'), isFalse); // & vs and: berbeda
+      expect(titlesMatch('UNSEEN (Uncut Ver.)', 'Unseen'), isTrue);
+      expect(titlesMatch('Overdo', 'overdo!'), isTrue);
+      expect(titlesMatch('Love', 'Love Story'), isFalse); // terlalu pendek untuk "memuat"
+      expect(titlesMatch('', 'x'), isFalse);
+    });
+
+    test('catatan menyimpan gambar kecil dan penanda otomatis', () {
+      const e = WatchEntry(id: 'w', title: 'T', kind: ThemePackId.drakor, startMs: 1, durationSec: 60, thumb: '/t.jpg', auto: true);
+      final back = WatchEntry.fromJson(e.toJson());
+      expect((back.thumb, back.auto), ('/t.jpg', true));
+      expect(AppSettings.fromJson(const AppSettings(autoLog: false).toJson()).autoLog, isFalse);
+      expect(AppSettings.fromJson(const {}).autoLog, isTrue);
     });
   });
 }

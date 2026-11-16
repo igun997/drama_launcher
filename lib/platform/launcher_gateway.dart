@@ -60,6 +60,10 @@ abstract class LauncherGateway {
   /// Kemajuan penutupan: aplikasi ke-[done] dari [total] sedang diproses.
   void onCloseProgress(void Function(int done, int total, String label) callback);
 
+  /// Judul tontonan terakhir yang terbaca dari WeTV/iQIYI sejak [sinceMs], atau null.
+  Future<NowWatchingInfo?> nowWatching(int sinceMs);
+  Future<void> clearNowWatching();
+
   /// Dipanggil saat ada teks baru dari tombol Bagikan.
   void onShared(void Function() callback);
 
@@ -115,6 +119,16 @@ class PlatformLauncherGateway implements LauncherGateway {
 
   @override
   Future<String?> takeSharedText() => _channel.invokeMethod<String>('takeSharedText');
+
+  @override
+  Future<NowWatchingInfo?> nowWatching(int sinceMs) async {
+    final m = await _channel.invokeMapMethod<Object?, Object?>('nowWatching', {'sinceMs': sinceMs});
+    if (m == null) return null;
+    return NowWatchingInfo(package: m['package']! as String, title: m['title']! as String, thumb: m['thumb'] as String?);
+  }
+
+  @override
+  Future<void> clearNowWatching() => _channel.invokeMethod<void>('clearNowWatching');
 
   @override
   Future<bool> openAppSettings(String package) => _bool('openAppSettings', {'package': package});

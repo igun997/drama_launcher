@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 
+import 'core/format.dart';
 import 'core/theme.dart';
 import 'core/theme_pack.dart';
 import 'data/app_state.dart';
@@ -31,6 +32,7 @@ class _DracinAppState extends State<DracinApp> with WidgetsBindingObserver {
     widget.state.gateway.onHome(() => _navigator.currentState?.popUntil((r) => r.isFirst));
     widget.state.incomingShare.addListener(_onShare);
     widget.state.pendingRecap.addListener(_onRecap);
+    widget.state.autoLogged.addListener(_onAutoLogged);
   }
 
   /// Bagikan dari WeTV/iQIYI/dll.: buka editor drama baru yang sudah terisi.
@@ -41,6 +43,30 @@ class _DracinAppState extends State<DracinApp> with WidgetsBindingObserver {
     widget.state.incomingShare.value = null;
     _navigator.currentState?.popUntil((r) => r.isFirst);
     openDramaEditor(context, prefill: shared);
+  }
+
+  /// Judul terbaca otomatis dan sudah dicatat: beri tahu, dengan jalan keluar bila salah.
+  void _onAutoLogged() {
+    final a = widget.state.autoLogged.value;
+    final context = _navigator.currentContext;
+    if (a == null || context == null) return;
+    widget.state.autoLogged.value = null;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text('Tercatat otomatis: ${a.entry.title} (${durationText(a.entry.duration)})'),
+          duration: const Duration(seconds: 8),
+          action: SnackBarAction(
+            label: 'Ubah',
+            onPressed: () {
+              // Hapus catatan otomatis dan tanyakan lewat lembar "Tadi nonton apa?".
+              widget.state.removeHistory(a.entry.id);
+              widget.state.pendingRecap.value = a.recap;
+            },
+          ),
+        ),
+      );
   }
 
   bool _recapOpen = false;
@@ -56,6 +82,7 @@ class _DracinAppState extends State<DracinApp> with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    widget.state.autoLogged.removeListener(_onAutoLogged);
     widget.state.pendingRecap.removeListener(_onRecap);
     widget.state.incomingShare.removeListener(_onShare);
     WidgetsBinding.instance.removeObserver(this);

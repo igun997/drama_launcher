@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:material_ui/material_ui.dart';
 
 import '../core/format.dart';
@@ -176,7 +178,9 @@ class _EntryTile extends StatelessWidget {
     final theme = Theme.of(context);
     final app = state.appOf(entry.appPackage);
     final drama = state.dramas.where((d) => d.id == entry.dramaId).firstOrNull;
-    final progress = entry.episode == null
+    final progress = entry.auto && entry.episode == null
+        ? 'Otomatis'
+        : entry.episode == null
         ? 'Tanpa episode'
         : entry.completed
             ? 'Eps ${entry.episode} selesai'
@@ -201,7 +205,7 @@ class _EntryTile extends StatelessWidget {
           padding: const EdgeInsets.all(14),
           child: Row(
             children: [
-              AppIcon(app: app, size: 52),
+              _Leading(entry: entry, app: app),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(
@@ -238,5 +242,35 @@ class _EntryTile extends StatelessWidget {
     } else if (entry.appPackage != null) {
       openPackage(context, state, entry.appPackage!);
     }
+  }
+}
+
+/// Gambar kecil tontonan (bila ada) dengan ikon aplikasi di sudutnya; selain itu hanya ikon aplikasi.
+class _Leading extends StatelessWidget {
+  const _Leading({required this.entry, required this.app});
+  final WatchEntry entry;
+  final AppEntry? app;
+
+  @override
+  Widget build(BuildContext context) {
+    final path = entry.thumb;
+    if (path == null || !File(path).existsSync()) return AppIcon(app: app, size: 52);
+    final c = context.colors;
+    return SizedBox(
+      width: 96,
+      height: 60,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          ExcludeSemantics(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.file(File(path), width: 96, height: 60, fit: BoxFit.cover, cacheWidth: 192, gaplessPlayback: true, errorBuilder: (_, _, _) => ColoredBox(color: c.surfaceHigh)),
+            ),
+          ),
+          Positioned(right: -6, bottom: -6, child: AppIcon(app: app, size: 28)),
+        ],
+      ),
+    );
   }
 }

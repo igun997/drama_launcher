@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Dracin Launcher</string>
-    <string name="force_stop_service_label">Tutup Aplikasi (Dracin Launcher)</string>
-    <string name="force_stop_description">Menekan tombol Paksa berhenti dan OK di layar Info aplikasi, hanya ketika Anda menekan Tutup atau Bersihkan RAM di Dracin Launcher. Tidak membaca layar aplikasi lain.</string>
+    <string name="force_stop_service_label">Tutup Aplikasi &amp; Catat Tontonan (Dracin Launcher)</string>
+    <string name="force_stop_description">Dua hal saja: (1) menekan Paksa berhenti dan Oke di layar Info aplikasi saat Anda menekan Tutup atau Bersihkan RAM di Dracin Launcher; (2) membaca judul tontonan dari WeTV dan iQIYI, plus satu tangkapan layar kecil, untuk mencatat riwayat. Tidak membaca aplikasi lain dan tidak mengirim apa pun keluar perangkat.</string>
 </resources>

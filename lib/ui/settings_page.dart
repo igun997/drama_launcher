@@ -242,6 +242,39 @@ class SettingsPage extends StatelessWidget {
                   ],
                 ),
               ),
+              // ---- Catat otomatis ----
+              Reveal(
+                index: 5,
+                onceKey: 'set-auto',
+                child: _Group(
+                  title: 'Catat tontonan otomatis',
+                  children: [
+                    SwitchListTile(
+                      value: s.autoLog,
+                      onChanged: (v) => state.updateSettings(s.copyWith(autoLog: v)),
+                      minTileHeight: 72,
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Catat dari WeTV dan iQIYI'),
+                      subtitle: const Text(
+                        'Judul yang terbaca di layar, plus satu tangkapan layar kecil, disimpan di riwayat. Hanya di perangkat ini.',
+                      ),
+                    ),
+                    _StatusTile(
+                      ok: state.accessibilityClose,
+                      okText: 'Layanan Aksesibilitas aktif',
+                      badText: 'Butuh layanan Aksesibilitas "Tutup Aplikasi & Catat Tontonan"',
+                    ),
+                    if (!state.accessibilityClose) ...[
+                      const SizedBox(height: 8),
+                      OutlinedButton.icon(
+                        onPressed: state.openAccessibilitySettings,
+                        icon: const Icon(Icons.accessibility_new_rounded),
+                        label: const Text('Buka pengaturan aksesibilitas'),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
               // ---- Mulai ulang ----
               Reveal(
                 index: 5,

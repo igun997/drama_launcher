@@ -19,6 +19,8 @@ class FakeGateway implements LauncherGateway {
   final launched = <String>[];
   bool launchResult = true;
   bool linkResult = true;
+  NowWatchingInfo? seen;
+  int clearedSeen = 0;
   final openedLinks = <(String, String)>[];
   String? shared;
   void Function()? sharedCb;
@@ -53,6 +55,14 @@ class FakeGateway implements LauncherGateway {
   Future<bool> openLink(String package, String url) async {
     openedLinks.add((package, url));
     return linkResult;
+  }
+
+  @override
+  Future<NowWatchingInfo?> nowWatching(int sinceMs) async => seen;
+  @override
+  Future<void> clearNowWatching() async {
+    clearedSeen++;
+    seen = null;
   }
 
   @override

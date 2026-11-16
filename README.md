@@ -5,6 +5,7 @@ Layar utama (launcher) Android yang minimalis untuk penonton drama Tiongkok. Pri
 - **Lanjut nonton**: kartu per drama (Dracin atau Drakor) dengan tombol besar "Nonton Eps N" dan "Eps N selesai" (+1, bisa diurungkan). Bila drama punya tautan, "Nonton" membuka langsung halaman drama di aplikasinya.
 - **Mode Dracin / Drakor**: satu ketukan menyaring daftar sekaligus memasang paket tema yang sama (lentera merah-emas atau sakura pink-biru malam, dengan kelopak jatuh). Membuka drama jenis lain memindahkan mode.
 - **Riwayat tontonan**: buka WeTV/iQIYI/dll. dari sini lalu kembali, launcher bertanya "Tadi nonton apa?" (Eps selesai / baru sebagian). Riwayat per hari, ringkasan 7 hari per jenis, dan tombol Lanjut.
+- **Catat otomatis dari WeTV dan iQIYI** (opsional, di Pengaturan): dengan layanan Aksesibilitas aktif, judul yang tampil di halaman detail/pemutar dibaca dan dicatat ke riwayat bersama satu tangkapan layar kecil (bingkai gelap/terlindungi dibuang). Diuji di perangkat: kedua aplikasi tidak memasang MediaSession maupun notifikasi saat memutar, jadi jalur itu tidak bisa dipakai. Hanya layar kedua aplikasi itu yang dibaca; tidak ada data keluar perangkat. Putar di jendela PiP tidak dihitung sebagai durasi.
 - **WeTV, iQIYI, Viu, Vidio, DramaBox, ReelShort, YouTube**: tautan dikenali dan aplikasinya dipilih otomatis; tombol Bagikan di aplikasi itu bisa mengirim judul + tautan langsung ke launcher ini. Tidak ada API resmi untuk membaca data/riwayat dari platform tersebut, jadi riwayat dicatat dari penggunaan lewat launcher.
 - **Pengingat tayang**: hari dan jam tayang per drama, dibunyikan 0/10/30 menit sebelumnya, tahan restart.
 - **Istirahat mata** (1 sampai 2,5 jam setelah membuka aplikasi tontonan) dan **waktu tidur** opsional.
@@ -62,5 +63,5 @@ Paket: `com.ciptadusa.dracin_launcher`. Lisensi: MIT.
 
 - **Akses penggunaan** (Pengaturan > Akses penggunaan): daftar aplikasi aktif.
 - **Shizuku** (opsional, mode senyap): pasang Shizuku, mulai lewat Debugging nirkabel/adb, lalu "Izinkan" di layar Aplikasi aktif.
-- **Aksesibilitas "Tutup Aplikasi"** (opsional, alternatif): hanya mendengarkan jendela Pengaturan sistem.
+- **Aksesibilitas "Tutup Aplikasi & Catat Tontonan"** (opsional): hanya mendengarkan jendela Pengaturan sistem (tutup aplikasi) dan WeTV/iQIYI (judul tontonan + tangkapan layar kecil).
 - Pengingat tepat waktu: notifikasi + "Alarm & pengingat".

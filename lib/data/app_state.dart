@@ -365,7 +365,7 @@ class AppState extends ChangeNotifier {
       final spent = now().difference(session.startedAt);
       // Terlalu singkat = hanya membuka lalu kembali; tidak dianggap menonton.
       if (spent >= const Duration(seconds: 60)) {
-        pendingRecap.value = Recap(package: session.package, dramaId: session.dramaId, startedAt: session.startedAt, duration: spent);
+        unawaited(_finishSession(session, spent));
       }
     }
     unawaited(refreshPermissions());
@@ -461,6 +461,43 @@ class AppState extends ChangeNotifier {
   }
 
 
+  /// Pesan singkat "Tercatat otomatis: ..." untuk ditampilkan layar; null bila tidak ada.
+  final ValueNotifier<AutoLogged?> autoLogged = ValueNotifier(null);
+
+  /// Sesi selesai: bila judulnya terbaca otomatis dari WeTV/iQIYI, langsung dicatat (dengan gambar kecil);
+  /// bila tidak, tanyakan lewat "Tadi nonton apa?".
+  Future<void> _finishSession(_Session s, Duration spent) async {
+    NowWatchingInfo? seen;
+    if (_settings.autoLog) {
+      try {
+        seen = await gateway.nowWatching(s.startedAt.millisecondsSinceEpoch);
+        if (seen != null && seen.package != s.package) seen = null;
+      } catch (_) {
+        seen = null;
+      }
+    }
+    var recap = Recap(package: s.package, dramaId: s.dramaId, startedAt: s.startedAt, duration: spent, title: seen?.title, thumb: seen?.thumb);
+    if (seen == null) {
+      pendingRecap.value = recap;
+      return;
+    }
+    await gateway.clearNowWatching();
+    final drama = _dramaFor(s.dramaId, seen.title, s.package);
+    final entry = logWatch(recap, drama: drama, completed: false, auto: true);
+    autoLogged.value = AutoLogged(entry: entry, recap: recap);
+  }
+
+  /// Drama yang cocok dengan judul terbaca: yang dibuka dari kartu, atau judul yang sama (tanpa huruf besar dan tanda baca).
+  Drama? _dramaFor(String? openedId, String title, String package) {
+    if (openedId != null) {
+      final d = _dramas.where((e) => e.id == openedId).firstOrNull;
+      if (d != null && titlesMatch(d.title, title)) return d;
+    }
+    final matches = _dramas.where((d) => titlesMatch(d.title, title)).toList();
+    matches.sort((a, b) => (a.appPackage == package ? 0 : 1).compareTo(b.appPackage == package ? 0 : 1));
+    return matches.firstOrNull;
+  }
+
   _Session? _endSession() {
     final s = _session;
     if (s == null) return null;
@@ -473,18 +510,20 @@ class AppState extends ChangeNotifier {
 
   /// Catat sesi [recap]. [drama] null bila pengguna tidak tahu/tidak memilih drama.
   /// [completed] menandai episode selesai dan menaikkan episode drama.
-  void logWatch(Recap recap, {Drama? drama, required bool completed}) {
+  WatchEntry logWatch(Recap recap, {Drama? drama, required bool completed, bool auto = false}) {
     final app = _byPackage[recap.package];
     final ep = drama?.nextEpisode;
     final entry = WatchEntry(
       id: 'w${recap.startedAt.microsecondsSinceEpoch.toRadixString(36)}',
       dramaId: drama?.id,
-      title: drama?.title ?? app?.label ?? recap.package,
+      title: drama?.title ?? recap.title ?? app?.label ?? recap.package,
       kind: drama?.kind ?? (_settings.viewMode.kind ?? ThemePackId.dracin),
       appPackage: recap.package,
       appLabel: app?.label,
       episode: ep,
       completed: completed && drama != null,
+      thumb: recap.thumb,
+      auto: auto,
       startMs: recap.startedAt.millisecondsSinceEpoch,
       durationSec: recap.duration.inSeconds.clamp(0, 24 * 3600),
     );
@@ -499,6 +538,7 @@ class AppState extends ChangeNotifier {
     pendingRecap.value = null;
     _persist();
     notifyListeners();
+    return entry;
   }
 
   void skipRecap() => pendingRecap.value = null;
@@ -553,6 +593,7 @@ class AppState extends ChangeNotifier {
     appearance.dispose();
     incomingShare.dispose();
     pendingRecap.dispose();
+    autoLogged.dispose();
     closeProgress.dispose();
     super.dispose();
   }
@@ -568,4 +609,23 @@ class AppScope extends InheritedNotifier<AppState> {
   const AppScope({super.key, required AppState state, required super.child}) : super(notifier: state);
 
   static AppState of(BuildContext context) => context.dependOnInheritedWidgetOfExactType<AppScope>()!.notifier!;
+}
+
+/// Hasil pencatatan otomatis, untuk pesan "Tercatat otomatis" dengan tombol Ubah.
+class AutoLogged {
+  const AutoLogged({required this.entry, required this.recap});
+  final WatchEntry entry;
+  final Recap recap;
+}
+
+String _norm(String s) => s.toLowerCase().replaceAll(RegExp(r'[^a-z0-9\u4e00-\u9fff\uac00-\ud7af]+'), '');
+
+/// Judul sama setelah membuang huruf besar, spasi, dan tanda baca; atau salah satu memuat yang lain (>= 5 huruf).
+bool titlesMatch(String a, String b) {
+  final x = _norm(a), y = _norm(b);
+  if (x.isEmpty || y.isEmpty) return false;
+  if (x == y) return true;
+  final short = x.length < y.length ? x : y;
+  final long = x.length < y.length ? y : x;
+  return short.length >= 5 && long.contains(short);
 }

@@ -1,6 +1,11 @@
 package com.ciptadusa.dracin_launcher
 
 import android.accessibilityservice.AccessibilityService
+import android.graphics.Bitmap
+import android.os.Handler
+import android.os.Looper
+import android.view.Display
+import java.io.File
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
@@ -24,10 +29,114 @@ class ForceStopService : AccessibilityService() {
         return super.onUnbind(intent)
     }
 
+    /** Hampir seluruh titik contoh gelap sekali (rata-rata cahaya < 12 dari 255). */
+    private fun isBlank(b: Bitmap): Boolean {
+        var sum = 0L
+        var n = 0
+        val stepX = (b.width / 24).coerceAtLeast(1)
+        val stepY = (b.height / 24).coerceAtLeast(1)
+        var y = 0
+        while (y < b.height) {
+            var x = 0
+            while (x < b.width) {
+                val c = b.getPixel(x, y)
+                sum += (((c shr 16) and 0xFF) * 299 + ((c shr 8) and 0xFF) * 587 + (c and 0xFF) * 114) / 1000
+                n++
+                x += stepX
+            }
+            y += stepY
+        }
+        return n == 0 || sum / n < 12
+    }
+
     override fun onInterrupt() {}
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-        step()
+        if (current != null) {
+            step()
+            return
+        }
+        // Tidak sedang menutup aplikasi: baca judul tontonan dari WeTV/iQIYI (satu id tampilan saja).
+        val pkg = event?.packageName?.toString() ?: return
+        if (pkg in WATCH_TITLE_IDS) scheduleRead(pkg)
+    }
+
+    private val handler = Handler(Looper.getMainLooper())
+    private var readRunnable: Runnable? = null
+    private var lastThumbKey: String? = null
+    private var lastThumbAt = 0L
+    private var thumbTries = 0
+
+    /**
+     * Baca paling sering tiap 1,5 detik. Sengaja bukan "tunggu tenang": pemutar mengirim peristiwa
+     * terus-menerus (bilah kemajuan), sehingga penundaan yang diulang tidak akan pernah jalan.
+     */
+    private fun scheduleRead(pkg: String) {
+        if (readRunnable != null) return
+        readRunnable = Runnable {
+            readRunnable = null
+            readTitle(pkg)
+        }.also { handler.postDelayed(it, 1500) }
+    }
+
+    private fun readTitle(pkg: String) {
+        val root = rootInActiveWindow ?: return
+        try {
+            if (root.packageName?.toString() != pkg) return
+            val (titleId, anchorId) = WATCH_TITLE_IDS[pkg] ?: return
+            // Halaman detail/pemutar memuat id jangkar (skor/jumlah episode); iklan dan beranda tidak.
+            if (root.findAccessibilityNodeInfosByViewId("$pkg:id/$anchorId").isEmpty()) return
+            val title = root.findAccessibilityNodeInfosByViewId("$pkg:id/$titleId")
+                .firstNotNullOfOrNull { it.text?.toString()?.trim()?.takeIf { t -> t.length in 2..120 } } ?: return
+            NowWatching.update(pkg, title)
+            maybeThumbnail(pkg, title)
+        } finally {
+            root.recycle()
+        }
+    }
+
+    /** Satu tangkapan layar kecil per tontonan (paling sering tiap 10 menit). */
+    private fun maybeThumbnail(pkg: String, title: String) {
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.R) return
+        val key = "$pkg|$title"
+        val now = System.currentTimeMillis()
+        if (key != lastThumbKey) {
+            lastThumbKey = key
+            thumbTries = 0
+        } else if (NowWatching.thumbPath != null || thumbTries >= 4 || now - lastThumbAt < 15_000L) {
+            return // sudah punya gambar, sudah mencoba 4 kali, atau terlalu cepat
+        }
+        thumbTries++
+        lastThumbAt = now
+        takeScreenshot(Display.DEFAULT_DISPLAY, mainExecutor, object : TakeScreenshotCallback {
+            override fun onSuccess(result: ScreenshotResult) {
+                try {
+                    val hw = Bitmap.wrapHardwareBuffer(result.hardwareBuffer, result.colorSpace) ?: return
+                    val soft = hw.copy(Bitmap.Config.ARGB_8888, false)
+                    hw.recycle()
+                    result.hardwareBuffer.close()
+                    if (isBlank(soft)) {
+                        // Layar video terlindungi/hitam: jangan simpan gambar kosong; dicoba lagi nanti.
+                        Log.i(TAG, "thumbnail kosong (hitam), dilewati")
+                        return
+                    }
+                    val w = 480
+                    val scaled = Bitmap.createScaledBitmap(soft, w, (soft.height * w / soft.width.toFloat()).toInt().coerceAtLeast(1), true)
+                    val dir = File(filesDir, "thumbs").apply { mkdirs() }
+                    val file = File(dir, "${key.hashCode().toUInt().toString(16)}.jpg")
+                    file.outputStream().use { scaled.compress(Bitmap.CompressFormat.JPEG, 80, it) }
+                    // Pastikan masih tontonan yang sama sebelum dipasang.
+                    if (NowWatching.title == title) NowWatching.thumbPath = file.absolutePath
+                    Log.i(TAG, "thumbnail $title -> ${file.name} (${file.length() / 1024} KB)")
+                } catch (e: Exception) {
+                    Log.i(TAG, "thumbnail gagal: ${e.message}")
+                }
+            }
+
+            override fun onFailure(errorCode: Int) {
+                Log.i(TAG, "tangkapan layar ditolak: $errorCode")
+            }
+        })
     }
 
     /**
@@ -182,6 +291,12 @@ class ForceStopService : AccessibilityService() {
         const val SETTINGS_PACKAGE = "com.android.settings"
         private val FORCE_STOP_LABELS = listOf("Paksa berhenti", "Hentikan paksa", "Berhenti paksa", "Force stop", "Force Stop")
         private val CONFIRM_LABELS = listOf("Oke", "OK", "Ya", "Yes", "Okay")
+
+        /** id judul dan id jangkar (halaman detail/pemutar) tiap aplikasi tontonan yang dikenal. */
+        val WATCH_TITLE_IDS = mapOf(
+            "com.iqiyi.i18n" to Pair("tv_title", "tv_score"),
+            "com.tencent.qqlivei18n" to Pair("titleTextView", "video_rating_tv"),
+        )
 
         @Volatile var instance: ForceStopService? = null
         @Volatile var current: Job? = null

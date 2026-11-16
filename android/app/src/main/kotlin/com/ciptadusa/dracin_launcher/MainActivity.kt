@@ -87,6 +87,14 @@ class MainActivity : FlutterActivity() {
                     result.success(true)
                 }
                 "openShizukuStore" -> result.success(openShizukuStore())
+                "nowWatching" -> {
+                    val since = call.argument<Number>("sinceMs")?.toLong() ?: 0L
+                    result.success(NowWatching.snapshot(since))
+                }
+                "clearNowWatching" -> {
+                    NowWatching.clear()
+                    result.success(true)
+                }
                 "forceStopEnabled" -> result.success(forceStopEnabled())
                 "openAccessibilitySettings" -> result.success(openAccessibilitySettings())
                 "forceStop" -> forceStop(call.argument<List<String>>("packages") ?: emptyList(), result)

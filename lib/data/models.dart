@@ -173,6 +173,7 @@ class AppSettings {
     this.themeMode = ThemeMode.dark,
     this.themePack = ThemePackId.dracin,
     this.viewMode = ViewMode.all,
+    this.autoLog = true,
     this.onboarded = false,
   });
 
@@ -184,6 +185,9 @@ class AppSettings {
   final ThemeMode themeMode;
   final ThemePackId themePack;
   final ViewMode viewMode;
+
+  /// Catat tontonan otomatis dari judul yang terbaca di WeTV/iQIYI (butuh layanan Aksesibilitas).
+  final bool autoLog;
   final bool onboarded;
 
   AppSettings copyWith({
@@ -195,6 +199,7 @@ class AppSettings {
     ThemeMode? themeMode,
     ThemePackId? themePack,
     ViewMode? viewMode,
+    bool? autoLog,
     bool? onboarded,
   }) {
     return AppSettings(
@@ -206,6 +211,7 @@ class AppSettings {
       themeMode: themeMode ?? this.themeMode,
       themePack: themePack ?? this.themePack,
       viewMode: viewMode ?? this.viewMode,
+      autoLog: autoLog ?? this.autoLog,
       onboarded: onboarded ?? this.onboarded,
     );
   }
@@ -219,6 +225,7 @@ class AppSettings {
         'themeMode': themeMode.name,
         'themePack': themePack.name,
         'viewMode': viewMode.name,
+        'autoLog': autoLog,
         'onboarded': onboarded,
       };
 
@@ -234,6 +241,7 @@ class AppSettings {
       themeMode: pick(ThemeMode.values, j['themeMode'], ThemeMode.dark),
       themePack: pick(ThemePackId.values, j['themePack'], ThemePackId.dracin),
       viewMode: pick(ViewMode.values, j['viewMode'], ViewMode.all),
+      autoLog: (j['autoLog'] as bool?) ?? true,
       onboarded: (j['onboarded'] as bool?) ?? false,
     );
   }
@@ -327,6 +335,8 @@ class WatchEntry {
     this.appLabel,
     this.episode,
     this.completed = false,
+    this.thumb,
+    this.auto = false,
   });
 
   final String id;
@@ -341,6 +351,12 @@ class WatchEntry {
   /// Episode yang ditonton; null bila tidak diketahui.
   final int? episode;
   final bool completed;
+
+  /// Jalur berkas gambar kecil (tangkapan layar saat menonton), bila ada.
+  final String? thumb;
+
+  /// Dicatat otomatis dari judul yang terbaca di WeTV/iQIYI, bukan dipilih pengguna.
+  final bool auto;
   final int startMs;
   final int durationSec;
 
@@ -356,6 +372,8 @@ class WatchEntry {
         'appLabel': appLabel,
         'episode': episode,
         'completed': completed,
+        'thumb': thumb,
+        'auto': auto,
         'startMs': startMs,
         'durationSec': durationSec,
       };
@@ -369,6 +387,8 @@ class WatchEntry {
         appLabel: j['appLabel'] as String?,
         episode: (j['episode'] as num?)?.toInt(),
         completed: (j['completed'] as bool?) ?? false,
+        thumb: j['thumb'] as String?,
+        auto: (j['auto'] as bool?) ?? false,
         startMs: (j['startMs'] as num?)?.toInt() ?? 0,
         durationSec: ((j['durationSec'] as num?)?.toInt() ?? 0).clamp(0, 24 * 3600),
       );
@@ -376,9 +396,21 @@ class WatchEntry {
 
 /// Sesi menonton yang baru selesai, menunggu pengguna memberi tahu apa yang ditonton.
 class Recap {
-  const Recap({required this.package, required this.startedAt, required this.duration, this.dramaId});
+  const Recap({required this.package, required this.startedAt, required this.duration, this.dramaId, this.title, this.thumb});
   final String package;
+
+  /// Judul yang terbaca otomatis dari aplikasinya (bila ada) dan gambar kecilnya.
+  final String? title;
+  final String? thumb;
   final String? dramaId;
   final DateTime startedAt;
   final Duration duration;
+}
+
+/// Judul tontonan yang terbaca dari WeTV/iQIYI oleh layanan Aksesibilitas.
+class NowWatchingInfo {
+  const NowWatchingInfo({required this.package, required this.title, this.thumb});
+  final String package;
+  final String title;
+  final String? thumb;
 }
